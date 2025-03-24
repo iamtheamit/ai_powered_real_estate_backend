@@ -1,0 +1,74 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env  # Load environment variables from .env file
+    networks:
+      - app-network
+    restart: always  # Ensures the app restarts if it crashes
+    depends_on:
+      - ml_service
+      - opensearch
+      - n8n
+
+  ml_service:
+    build:
+      context: ../ml_service
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env  # Load environment variables for ML service if needed
+    networks:
+      - app-network
+    restart: always  # Ensures ML service restarts if it crashes
+
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}  # Pass NeonDB URL to n8n
+      - OPENSEARCH_HOST=http://opensearch:9200
+      - N8N_URL=http://n8n:5678
+    volumes:
+      - n8n-data:/home/node/.n8n
+    networks:
+      - app-network
+    restart: always
+    depends_on:
+      - opensearch
+
+  opensearch:
+    image: opensearchproject/opensearch:2.9.0
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=true  # Disable security for local dev
+      # - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD}  # Set via .env
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9600:9600"  # For performance monitoring (optional)
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    networks:
+      - app-network
+    restart: always
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  n8n-data:
+  opensearch-data:

@@ -1,0 +1,102 @@
+type User {
+  id: ID!
+  email: String!
+  role: String!
+  profile: String
+  location: String
+}
+
+type UserPreferences {
+    profile: String!
+    location: String!
+}
+
+
+type Property {
+    id: ID!
+    address: String!
+    price: Float!
+    vendorName: String!
+    description: String!
+
+}
+
+type AuthPayload {
+    token: String!
+    user: User!
+}
+
+type LeadScore {
+    score: Float!
+}
+
+type VerificationResult {
+    status: String!
+}
+
+input PropertyInput {
+    address: String!
+    price: Float!
+    vendorName: String!
+    description: String!
+}
+
+input LeadInput {
+    userEmail: String!
+    propertyPrice: Float!
+    location: String!
+}
+
+input VendorInput {
+    name: String!
+    id: String!
+}
+
+input RegisterInput {
+  email: String!
+  password: String!
+  role: String!
+  profile: String
+  location: String
+}
+
+
+input LoginInput {
+    email: String!
+    password: String!
+}
+
+type SearchResponse {
+    searchQuery: String
+    recommendations: [Recommendation!]!
+}
+
+type Recommendation {
+    id: ID!
+    address: String!
+    price: Float!
+    vendorName: String!
+    description: String!
+}
+
+
+type Query {
+    getProfile: User! @auth  # Requires authentication
+    listProperties: [Property!]!
+    getProperty(id: ID!): Property!
+    searchSimilarProperties(description: String!): SearchResponse!
+    getLeadScore(input: LeadInput!): LeadScore! # AI/ML-based lead scoring
+}
+
+type Mutation {
+    register(input: RegisterInput!): User!  # Returns only user info, no JWT
+    login(email: String!, password: String!): AuthPayload!
+
+    createProperty(input: PropertyInput!): Property! @auth(role: "vendor")
+    updateProperty(id: ID!, input: PropertyInput!): Property! @auth(role: "vendor")
+    deleteProperty(id: ID!): Boolean! @auth(role: "vendor")
+
+    verifyVendor(input: VendorInput!): VerificationResult! @auth(role: "admin")
+}
+
+directive @auth(role: String) on FIELD_DEFINITION
